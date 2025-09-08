@@ -1,0 +1,43 @@
+FROM php:8.2-apache
+
+
+# System‑Pakete und PHP‑Extensions
+RUN apt-get update \
+&& apt-get install -y --no-install-recommends \
+libicu-dev libjpeg62-turbo-dev libpng-dev libfreetype6-dev \
+libzip-dev zip unzip curl less \
+&& rm -rf /var/lib/apt/lists/* \
+&& docker-php-ext-configure gd --with-freetype --with-jpeg \
+&& docker-php-ext-install -j"$(nproc)" gd intl mysqli pdo_mysql zip opcache
+
+
+# Apache Module
+RUN a2enmod rewrite headers expires
+
+
+# WP‑CLI
+RUN curl -o /usr/local/bin/wp -fSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+&& chmod +x /usr/local/bin/wp
+
+
+# WordPress Core in /usr/src/wordpress (wird bei Start in /var/www/html kopiert, falls leer)
+ADD https://wordpress.org/latest.tar.gz /tmp/wordpress.tar.gz
+RUN mkdir -p /usr/src/wordpress \
+&& tar -xzf /tmp/wordpress.tar.gz -C /usr/src/ \
+&& rm /tmp/wordpress.tar.gz \
+&& chown -R www-data:www-data /usr/src/wordpress
+
+
+# VirtualHost
+COPY vhost.conf /etc/apache2/sites-available/000-default.conf
+
+
+# Entrypoint zum Erstbefüllen & Rechtesetzen
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+
+WORKDIR /var/www/html
+EXPOSE 80
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["apache2-foreground"]
