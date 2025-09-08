@@ -2,61 +2,40 @@ version: "3.9"
 
 
 services:
-web:
-build:
-context: ./apache
-container_name: wp_web
-restart: unless-stopped
-env_file: .env
-ports:
-- "8080:80"
-environment:
-# Wird in vhost.conf/Apache genutzt
-APACHE_DOCUMENT_ROOT: /var/www/html
-volumes:
-- ./wordpress:/var/www/html
-- ./php/php.ini:/usr/local/etc/php/conf.d/zz-custom.ini:ro
-depends_on:
-- db
-healthcheck:
-test: ["CMD", "curl", "-fsS", "http://oc-event.de/" ]
-interval: 30s
-timeout: 5s
-retries: 5
+  db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
 
 
-db:
-image: mariadb:10.11
-container_name: wp_db
-restart: unless-stopped
-env_file: .env
-environment:
-MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-MYSQL_DATABASE: ${MYSQL_DATABASE}
-MYSQL_USER: ${MYSQL_USER}
-MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-volumes:
-- db_data:/var/lib/mysql
-command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
-
-
-# phpmyadmin (optional): entferne Kommentare, um zu aktivieren
-# phpmyadmin:
-# image: phpmyadmin:5
-# restart: unless-stopped
-# environment:
-# PMA_HOST: db
-# UPLOAD_LIMIT: 256M
-# ports:
-# - "8081:80"
-# depends_on:
-# - db
+  web:
+    build:
+      context: ./apache
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8080:80"
+    environment:
+      APACHE_DOCUMENT_ROOT: /var/www/html
+    volumes:
+      - ./wordpress:/var/www/html
+      - ./php/php.ini:/usr/local/etc/php/conf.d/zz-custom.ini:ro
+    depends_on:
+      - db
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
 
 volumes:
-db_data:
-
-
-networks:
-default:
-name: wpnet
+  db_data:
