@@ -28,13 +28,6 @@ services:
     volumes:
       - ./wordpress:/var/www/html
       - ./php/php.ini:/usr/local/etc/php/conf.d/zz-custom.ini:ro
-    depends_on:
-      - db
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost/"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
 
 
 volumes:
