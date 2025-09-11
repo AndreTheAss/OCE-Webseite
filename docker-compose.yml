@@ -1,50 +1,68 @@
 version: "3.9"
 
+services:
+  apache:
+    image: wordpress:php8.2-apache
+    container_name: my_apache
+    restart: unless-stopped
+    depends_on:
+      - dbwp
+    volumes:
+      - ./site:/var/www/html
+    ports:
+      - "8087:80"
+    networks:
+      - npm_default
+
+  dbwp:
+    image: mariadb:11
+    container_name: my_database
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: "BitteAendern123!"
+      MARIADB_DATABASE: "appdb"
+      MARIADB_USER: "appuser"
+      MARIADB_PASSWORD: "BitteAendern123!"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - npm_default
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: my_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: "dbwp"
+      PMA_ARBITRARY: "0"
+      UPLOAD_LIMIT: "256M"
+    ports:
+      - "8086:80"
+    networks:
+      - npm_default
+
+  ftp:
+    image: stilliard/pure-ftpd:hardened
+    container_name: my_ftp
+    restart: unless-stopped
+    environment:
+      PUBLICHOST: "87.106.81.201"
+      FTP_USER_NAME: "webuser"
+      FTP_USER_PASS: "BitteAendern123!"
+      FTP_USER_HOME: "/home/webuser"
+      FTP_PASSIVE_PORTS: "30000:30009"
+      TZ: "Europe/Berlin"
+    ports:
+      - "25:21"
+      - "30000-30009:30000-30009"
+    volumes:
+      - ./site:/home/webuser
+    networks:
+      - npm_default
 
 networks:
-  wpnet:
-    driver: bridge
-
+  npm_default:
+    external: true
 
 volumes:
   db_data:
-
-
-services:
-  db:
-    image: mariadb:10.11
-    restart: unless-stopped
-    env_file: .env
-    environment:
-    MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-    MYSQL_DATABASE: ${MYSQL_DATABASE}
-    MYSQL_USER: ${MYSQL_USER}
-    MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    volumes:
-      - db_data:/var/lib/mysql
-    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
-    networks:
-      - wpnet
-
-
-web:
-  build:
-    context: ./apache
-  restart: unless-stopped
-  env_file: .env
-  ports:
-    - "8080:80"
-  environment:
-    APACHE_DOCUMENT_ROOT: /var/www/html
-  volumes:
-    - ./wordpress:/var/www/html
-    - ./php/php.ini:/usr/local/etc/php/conf.d/zz-custom.ini:ro
-  depends_on:
-    - db
-  healthcheck:
-    test: ["CMD", "curl", "-fsS", "http://localhost/"]
-    interval: 30s
-    timeout: 5s
-    retries: 5
-  networks:
-    - wpnet
