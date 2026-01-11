@@ -1,68 +1,58 @@
 version: "3.9"
 
 services:
-  apache:
+  ocevent-wordpress:
     image: wordpress:php8.2-apache
-    container_name: my_apache
+    container_name: ocevent-wordpress
     restart: unless-stopped
     depends_on:
-      - dbwp
+      - ocevent-db
+    environment:
+      WORDPRESS_DB_HOST: ocevent-db:3306
+      WORDPRESS_DB_NAME: ocevent_db
+      WORDPRESS_DB_USER: ocevent_user
+      WORDPRESS_DB_PASSWORD: BitteAendern123!
+      WORDPRESS_CONFIG_EXTRA: |
+        define('FS_METHOD', 'direct');
     volumes:
-      - ./site:/var/www/html
-    ports:
-      - "8087:80"
+      - ocevent_site:/var/www/html
     networks:
       - npm_default
+      - ocevent-internal
 
-  dbwp:
+  ocevent-db:
     image: mariadb:11
-    container_name: my_database
+    container_name: ocevent-db
     restart: unless-stopped
     environment:
-      MARIADB_ROOT_PASSWORD: "BitteAendern123!"
-      MARIADB_DATABASE: "appdb"
-      MARIADB_USER: "appuser"
-      MARIADB_PASSWORD: "BitteAendern123!"
+      MARIADB_ROOT_PASSWORD: BitteAendern123!
+      MARIADB_DATABASE: ocevent_db
+      MARIADB_USER: ocevent_user
+      MARIADB_PASSWORD: BitteAendern123!
     volumes:
-      - db_data:/var/lib/mysql
+      - ocevent_db_data:/var/lib/mysql
     networks:
-      - npm_default
+      - ocevent-internal
 
-  phpmyadmin:
+  ocevent-phpmyadmin:
     image: phpmyadmin:latest
-    container_name: my_phpmyadmin
+    container_name: ocevent-phpmyadmin
     restart: unless-stopped
     environment:
-      PMA_HOST: "dbwp"
+      PMA_HOST: ocevent-db
       PMA_ARBITRARY: "0"
       UPLOAD_LIMIT: "256M"
     ports:
       - "8086:80"
     networks:
-      - npm_default
-
-  ftp:
-    image: stilliard/pure-ftpd:hardened
-    container_name: my_ftp
-    restart: unless-stopped
-    environment:
-      PUBLICHOST: "87.106.81.201"
-      FTP_USER_NAME: "webuser"
-      FTP_USER_PASS: "BitteAendern123!"
-      FTP_USER_HOME: "/home/webuser"
-      FTP_PASSIVE_PORTS: "30000:30009"
-      TZ: "Europe/Berlin"
-    ports:
-      - "25:21"
-      - "30000-30009:30000-30009"
-    volumes:
-      - ./site:/home/webuser
-    networks:
-      - npm_default
+      - ocevent-internal
 
 networks:
   npm_default:
     external: true
+  ocevent-internal:
+    driver: bridge
 
 volumes:
-  db_data:
+  ocevent_site:
+  ocevent_db_data:
