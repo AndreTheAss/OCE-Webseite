@@ -1,4 +1,4 @@
-version: "3.9"
+version: "3.8"
 
 services:
   ocevent-wordpress:
@@ -16,8 +16,32 @@ services:
         define('FS_METHOD', 'direct');
     volumes:
       - ocevent_site:/var/www/html
+    labels:
+      - "traefik.enable=true"
+
+      # Netzwerk für Traefik
+      - "traefik.docker.network=traefik_proxy"
+
+      # HTTPS Router
+      - "traefik.http.routers.ocevent.rule=Host(`oc-event.de`) || Host(`www.oc-event.de`)"
+      - "traefik.http.routers.ocevent.entrypoints=websecure"
+      - "traefik.http.routers.ocevent.tls=true"
+      - "traefik.http.routers.ocevent.tls.certresolver=myresolver"
+
+      # Service (WordPress läuft intern auf Port 80)
+      - "traefik.http.services.ocevent.loadbalancer.server.port=80"
+
+      # HTTP Router (Redirect auf HTTPS)
+      - "traefik.http.routers.ocevent-http.rule=Host(`oc-event.de`) || Host(`www.oc-event.de`)"
+      - "traefik.http.routers.ocevent-http.entrypoints=web"
+      - "traefik.http.routers.ocevent-http.middlewares=ocevent-redirect"
+
+      # Middleware Redirect
+      - "traefik.http.middlewares.ocevent-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.ocevent-redirect.redirectscheme.permanent=true"
     networks:
       - npm_default
+      - traefik_proxy
       - ocevent-internal
 
   ocevent-db:
@@ -49,6 +73,8 @@ services:
 
 networks:
   npm_default:
+    external: true
+  traefik_proxy:
     external: true
   ocevent-internal:
     driver: bridge
